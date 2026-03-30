@@ -1,13 +1,14 @@
 {
   "name": "edukatus-analytics",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.1.0",
+  "description": "Browser extension for school absence, grades, and student analytics",
   "scripts": {
     "build": "node build.mjs",
-    "build:quick": "vite build",
     "watch": "vite build --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "release:patch": "npm version patch && git push && git push --tags",
+    "release:minor": "npm version minor && git push && git push --tags",
+    "release:major": "npm version major && git push && git push --tags"
   },
   "keywords": [],
   "author": "",

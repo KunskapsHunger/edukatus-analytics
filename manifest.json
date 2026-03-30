@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Progress Analytics",
+  "name": "Edukatus Analytics",
   "version": "0.1.0",
   "description": "Analytics dashboard for Progress school administration.",
   "permissions": [
@@ -22,7 +22,7 @@
     }
   ],
   "action": {
-    "default_title": "Progress Analytics"
+    "default_title": "Edukatus Analytics"
   },
   "icons": {
     "48": "icons/icon-48.svg",

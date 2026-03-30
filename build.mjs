@@ -1,6 +1,11 @@
 import { readFileSync, writeFileSync, mkdirSync, cpSync, rmSync } from 'fs';
 import { build } from 'esbuild';
 
+// 0. Read version from package.json (single source of truth)
+const pkg = JSON.parse(readFileSync('package.json', 'utf-8'));
+const VERSION = pkg.version;
+console.log(`Building Edukatus Analytics v${VERSION}`);
+
 // 1. Clean
 rmSync('dist', { recursive: true, force: true });
 rmSync('build-firefox', { recursive: true, force: true });
@@ -29,8 +34,8 @@ for (const entry of entries) {
 // 3. Read base manifest template
 const manifest = {
   manifest_version: 3,
-  name: 'Progress Analytics',
-  version: '0.1.0',
+  name: 'Edukatus Analytics',
+  version: VERSION,
   description: 'Analytics dashboard for Progress school administration.',
   permissions: ['storage', 'activeTab'],
   host_permissions: ['https://progress.edukatus.se/*'],
@@ -39,7 +44,7 @@ const manifest = {
     js: ['dist/content.js'],
     run_at: 'document_idle',
   }],
-  action: { default_title: 'Progress Analytics' },
+  action: { default_title: 'Edukatus Analytics' },
   icons: { '48': 'icons/icon-48.svg', '128': 'icons/icon-128.svg' },
 };
 

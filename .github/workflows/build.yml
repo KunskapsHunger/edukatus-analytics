@@ -1,0 +1,49 @@
+name: Build & Release Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: node build.mjs
+
+      # Chrome/Edge ZIP
+      - run: |
+          cd ${{ github.workspace }}
+          zip -r edukatus-analytics-chrome.zip \
+            manifest.json dashboard.html popup.html privacy.html \
+            icons/ dist/
+
+      # Firefox ZIP
+      - run: |
+          cd build-firefox
+          zip -r ../edukatus-analytics-firefox.zip .
+
+      # Source ZIP (for Firefox review)
+      - run: |
+          zip -r edukatus-analytics-source.zip \
+            src/ package.json package-lock.json tsconfig.json \
+            vite.config.ts build.mjs manifest.json \
+            dashboard.html popup.html privacy.html icons/
+
+      # Create GitHub Release with all ZIPs
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            edukatus-analytics-chrome.zip
+            edukatus-analytics-firefox.zip
+            edukatus-analytics-source.zip
+          generate_release_notes: true
