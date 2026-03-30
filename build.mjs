@@ -55,7 +55,13 @@ const firefoxManifest = {
   ...manifest,
   background: { scripts: ['dist/background.js'] },
   browser_specific_settings: {
-    gecko: { id: 'edukatus-analytics@example.com', strict_min_version: '109.0' },
+    gecko: {
+      id: 'edukatus-analytics@example.com',
+      strict_min_version: '109.0',
+      data_collection_permissions: {
+        required: false,
+      },
+    },
   },
 };
 
