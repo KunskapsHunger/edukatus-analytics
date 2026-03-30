@@ -57,9 +57,9 @@ const firefoxManifest = {
   browser_specific_settings: {
     gecko: {
       id: 'edukatus-analytics@example.com',
-      strict_min_version: '109.0',
+      strict_min_version: '140.0',
       data_collection_permissions: {
-        required: false,
+        required: [],
       },
     },
   },
