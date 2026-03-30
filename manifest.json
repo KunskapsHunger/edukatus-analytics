@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Progress Analytics",
+  "version": "0.1.0",
+  "description": "Analytics dashboard for Progress school administration.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://progress.edukatus.se/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://progress.edukatus.se/*"
+      ],
+      "js": [
+        "dist/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Progress Analytics"
+  },
+  "icons": {
+    "48": "icons/icon-48.svg",
+    "128": "icons/icon-128.svg"
+  },
+  "background": {
+    "service_worker": "dist/background.js"
+  }
+}
