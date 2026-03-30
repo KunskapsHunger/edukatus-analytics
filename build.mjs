@@ -64,6 +64,7 @@ cpSync('dist', 'build-firefox/dist', { recursive: true });
 cpSync('icons', 'build-firefox/icons', { recursive: true });
 cpSync('popup.html', 'build-firefox/popup.html');
 cpSync('dashboard.html', 'build-firefox/dashboard.html');
+cpSync('privacy.html', 'build-firefox/privacy.html');
 writeFileSync('build-firefox/manifest.json', JSON.stringify(firefoxManifest, null, 2));
 
 console.log('\nBuilt for Chrome/Edge: ./ (load unpacked from extension root)');
