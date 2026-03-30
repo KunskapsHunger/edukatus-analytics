@@ -15,13 +15,15 @@ let data: StoredData = {
   absenceRecords: [],
   studentSummaries: [],
   periodSummaries: [],
-  guardians: [],
   courseHours: [],
   counselingData: [],
   lastUpdated: null,
   sources: [],
   schoolInfo: null,
 };
+
+// Guardian data is never persisted — fetched from background in-memory cache
+let guardianCache: Guardian[] = [];
 let currentView = 'overview';
 let expandedStudentName: string | null = null;
 let selectedReportStudent: string | null = null;
@@ -177,6 +179,14 @@ function loadData(): Promise<StoredData> {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({ type: 'GET_ALL_DATA' }, (resp: { payload?: StoredData } | undefined) => {
       resolve(resp?.payload ?? data);
+    });
+  });
+}
+
+function loadGuardians(): Promise<Guardian[]> {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: 'GET_GUARDIANS' }, (resp: { guardians?: Guardian[] } | undefined) => {
+      resolve(resp?.guardians ?? []);
     });
   });
 }
@@ -2226,7 +2236,7 @@ function renderAbsenceHeatmap(studentName: string): string {
 function renderGuardianContact(studentName: string): string {
   const student = data.students.find((s) => s.name === studentName);
   const studentSummary = data.studentSummaries.find((s) => s.studentName === studentName);
-  const studentGuardians = (data.guardians ?? []).filter((g: Guardian) => g.studentName === studentName);
+  const studentGuardians = guardianCache.filter((g: Guardian) => g.studentName === studentName);
 
   const absencePct = studentSummary?.totalAbsencePercent ?? 0;
   const firstName = studentName.split(/\s+/)[0] ?? studentName;
@@ -2321,7 +2331,7 @@ function renderGuardianContact(studentName: string): string {
 
 /** Attach copy-to-clipboard handlers for guardian message buttons. Call after HTML is in DOM. */
 function attachGuardianCopyHandlers(studentName: string): void {
-  const guardians = (data.guardians ?? []).filter((g: Guardian) => g.studentName === studentName);
+  const guardians = guardianCache.filter((g: Guardian) => g.studentName === studentName);
   guardians.forEach((_g: Guardian, idx: number) => {
     const safeName = studentName.replace(/[^a-zA-Z0-9]/g, '_');
     const msgId = `guardian-msg-${safeName}-${idx}`;
@@ -4818,7 +4828,7 @@ async function triggerFetch(): Promise<void> {
 
     await new Promise((r) => setTimeout(r, 1500));
 
-    data = await loadData();
+    [data, guardianCache] = await Promise.all([loadData(), loadGuardians()]);
     render();
   } finally {
     hideProgress();
@@ -4838,7 +4848,7 @@ $('btn-refresh').addEventListener('click', async () => {
 $('btn-clear').addEventListener('click', () => {
   if (confirm('Rensa all insamlad data?')) {
     chrome.runtime.sendMessage({ type: 'CLEAR_DATA' }, async () => {
-      data = await loadData();
+      [data, guardianCache] = await Promise.all([loadData(), loadGuardians()]);
       expandedStudentName = null;
       render();
     });
@@ -4850,7 +4860,7 @@ $('btn-clear').addEventListener('click', () => {
 // ---------------------------------------------------------------------------
 
 async function init(): Promise<void> {
-  data = await loadData();
+  [data, guardianCache] = await Promise.all([loadData(), loadGuardians()]);
 
   // Debug: check data integrity
   const recMap = recordsByStudent();

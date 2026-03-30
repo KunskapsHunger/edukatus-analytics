@@ -4,8 +4,7 @@ export interface Student {
   readonly id: string;
   readonly name: string;
   readonly className: string;
-  readonly personnummer?: string;   // YYMMDD-XXXX
-  readonly age?: number;            // Calculated from personnummer
+  readonly age?: number;            // Calculated from personnummer (not stored)
   readonly isOver18?: boolean;
 }
 
@@ -110,7 +109,8 @@ export type Message =
   | { type: 'DATA_CLEARED' }
   | { type: 'SCRAPE_PAGE' }
   | { type: 'FETCH_STATUS'; payload: FetchStatus }
-  | { type: 'PAGE_INFO'; payload: PageInfo };
+  | { type: 'PAGE_INFO'; payload: PageInfo }
+  | { type: 'GET_GUARDIANS' };
 
 export interface FetchStatus {
   readonly phase: string;
@@ -142,7 +142,6 @@ export interface StoredData {
   readonly absenceRecords: readonly AbsenceRecord[];
   readonly studentSummaries: readonly StudentAbsenceSummary[];
   readonly periodSummaries: readonly PeriodSummary[];
-  readonly guardians: readonly Guardian[];
   readonly courseHours: readonly CourseHours[];
   readonly counselingData: readonly StudentCounselingData[];
   readonly lastUpdated: string | null;

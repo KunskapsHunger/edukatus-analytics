@@ -88,14 +88,13 @@ async function fetchAllData(): Promise<ExtractedData> {
       console.warn('[edukatus-analytics] Failed to fetch guardians (non-fatal):', err);
     }
 
-    // Enrich students with personnummer, age, isOver18
+    // Enrich students with age and isOver18 (derived from personnummer — raw personnummer not stored)
     const enrichedStudents = students.map((s) => {
       const pnr = studentPersonnummer.get(s.name);
       if (!pnr) return s;
       const ageInfo = calculateAgeFromPersonnummer(pnr);
       return {
         ...s,
-        personnummer: pnr,
         age: ageInfo?.age,
         isOver18: ageInfo?.isOver18,
       };

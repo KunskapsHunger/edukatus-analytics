@@ -1,23 +1,55 @@
-import type { Message, ExtractedData } from './types';
-import { storeStudents, storeGrades, storeAttendance, storeCourses, storeAbsenceRecords, storeStudentSummaries, storePeriodSummaries, storeGuardians, storeCourseHours, storeCounselingData, storeMeta, getAllData, clearAllData } from './storage';
+import type { Message, ExtractedData, Guardian } from './types';
+import { storeAllData, storeMeta, getAllData, clearAllData } from './storage';
+
+// In-memory guardian cache — never persisted to IndexedDB
+let cachedGuardians: Guardian[] = [];
 
 async function handleExtractedData(data: ExtractedData): Promise<void> {
-  if (data.students?.length) await storeStudents(data.students);
-  if (data.grades?.length) await storeGrades(data.grades);
-  if (data.attendance?.length) await storeAttendance(data.attendance);
-  if (data.courses?.length) await storeCourses(data.courses);
-  if (data.absenceRecords?.length) await storeAbsenceRecords(data.absenceRecords);
-  if (data.studentSummaries?.length) await storeStudentSummaries(data.studentSummaries);
-  if (data.periodSummaries?.length) await storePeriodSummaries(data.periodSummaries);
-  if (data.guardians?.length) await storeGuardians(data.guardians);
-  if (data.courseHours?.length) await storeCourseHours(data.courseHours);
-  if (data.counselingData?.length) await storeCounselingData(data.counselingData);
+  // Cache guardians in memory only
+  if (data.guardians?.length) {
+    cachedGuardians = [...data.guardians];
+  }
+
+  // Load existing data, merge new data in, then store the merged result
+  const existing = await getAllData();
+
+  const merged: Parameters<typeof storeAllData>[0] = {};
+
+  if (data.students?.length) merged.students = data.students;
+  else if (existing.students.length) merged.students = existing.students;
+
+  if (data.grades?.length) merged.grades = data.grades;
+  else if (existing.grades.length) merged.grades = existing.grades;
+
+  if (data.attendance?.length) merged.attendance = data.attendance;
+  else if (existing.attendance.length) merged.attendance = existing.attendance;
+
+  if (data.courses?.length) merged.courses = data.courses;
+  else if (existing.courses.length) merged.courses = existing.courses;
+
+  if (data.absenceRecords?.length) merged.absenceRecords = data.absenceRecords;
+  else if (existing.absenceRecords.length) merged.absenceRecords = existing.absenceRecords;
+
+  if (data.studentSummaries?.length) merged.studentSummaries = data.studentSummaries;
+  else if (existing.studentSummaries.length) merged.studentSummaries = existing.studentSummaries;
+
+  if (data.periodSummaries?.length) merged.periodSummaries = data.periodSummaries;
+  else if (existing.periodSummaries.length) merged.periodSummaries = existing.periodSummaries;
+
+  if (data.courseHours?.length) merged.courseHours = data.courseHours;
+  else if (existing.courseHours.length) merged.courseHours = existing.courseHours;
+
+  if (data.counselingData?.length) merged.counselingData = data.counselingData;
+  else if (existing.counselingData.length) merged.counselingData = existing.counselingData;
+
+  await storeAllData(merged);
+
   if (data.schoolInfo) await storeMeta('schoolInfo', JSON.stringify(data.schoolInfo));
 
   await storeMeta('lastUpdated', data.timestamp);
 
-  const allData = await getAllData();
-  const sources = new Set(allData.sources);
+  const updatedData = await getAllData();
+  const sources = new Set(updatedData.sources);
   sources.add(data.source);
   await storeMeta('sources', JSON.stringify([...sources]));
 }
@@ -59,10 +91,15 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
       .catch(() => sendResponse({ type: 'ALL_DATA', payload: {
         students: [], grades: [], attendance: [], courses: [],
         absenceRecords: [], studentSummaries: [], periodSummaries: [],
-        guardians: [], courseHours: [], counselingData: [],
+        courseHours: [], counselingData: [],
         lastUpdated: null, sources: [], schoolInfo: null,
       }}));
     return true;
+  }
+
+  if (message.type === 'GET_GUARDIANS') {
+    sendResponse({ guardians: cachedGuardians });
+    return false;
   }
 
   if (message.type === 'CLEAR_DATA') {
