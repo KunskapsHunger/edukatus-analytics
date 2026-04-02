@@ -26,35 +26,46 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 async function putEncrypted(db: IDBDatabase, key: string, value: unknown): Promise<void> {
-  const json = JSON.stringify(value);
-  const encrypted = await encryptData(json);
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('encrypted', 'readwrite');
-    tx.objectStore('encrypted').put({ _key: key, data: encrypted });
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  try {
+    const json = JSON.stringify(value);
+    console.log(`[storage] Encrypting ${key}: ${json.length} chars`);
+    const encrypted = await encryptData(json);
+    console.log(`[storage] Encrypted ${key}: ${encrypted.length} chars, prefix: ${encrypted.substring(0, 4)}`);
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('encrypted', 'readwrite');
+      tx.objectStore('encrypted').put({ _key: key, data: encrypted });
+      tx.oncomplete = () => { console.log(`[storage] Stored ${key}`); resolve(); };
+      tx.onerror = () => { console.error(`[storage] Failed to store ${key}:`, tx.error); reject(tx.error); };
+    });
+  } catch (e) {
+    console.error(`[storage] putEncrypted failed for ${key}:`, e);
+    throw e;
+  }
 }
 
 async function getEncrypted<T>(db: IDBDatabase, key: string, fallback: T): Promise<T> {
-  return new Promise((resolve) => {
-    const tx = db.transaction('encrypted', 'readonly');
-    const req = tx.objectStore('encrypted').get(key);
-    req.onsuccess = async () => {
-      const record = req.result as { _key: string; data: string } | undefined;
-      if (!record) {
-        resolve(fallback);
-        return;
-      }
-      try {
-        const json = await decryptData(record.data);
-        resolve(JSON.parse(json) as T);
-      } catch {
-        resolve(fallback);
-      }
-    };
-    req.onerror = () => resolve(fallback);
-  });
+  try {
+    const record = await new Promise<{ _key: string; data: string } | undefined>((resolve, reject) => {
+      const tx = db.transaction('encrypted', 'readonly');
+      const req = tx.objectStore('encrypted').get(key);
+      req.onsuccess = () => resolve(req.result as { _key: string; data: string } | undefined);
+      req.onerror = () => reject(req.error);
+    });
+
+    if (!record) {
+      console.log(`[storage] No data found for ${key}`);
+      return fallback;
+    }
+
+    console.log(`[storage] Read ${key}: ${record.data.length} chars, prefix: ${record.data.substring(0, 4)}`);
+    const json = await decryptData(record.data);
+    const parsed = JSON.parse(json) as T;
+    console.log(`[storage] Decrypted ${key}: ${Array.isArray(parsed) ? (parsed as unknown[]).length + ' items' : 'object'}`);
+    return parsed;
+  } catch (e) {
+    console.error(`[storage] getEncrypted failed for ${key}:`, e);
+    return fallback;
+  }
 }
 
 export async function storeAllData(incoming: Partial<StoredData>): Promise<void> {
