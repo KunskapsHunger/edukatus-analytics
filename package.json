@@ -1,6 +1,6 @@
 {
   "name": "edukatus-analytics",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Browser extension for school absence, grades, and student analytics",
   "scripts": {
     "build": "node build.mjs",

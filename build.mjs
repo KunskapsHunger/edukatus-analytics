@@ -7,8 +7,11 @@ const VERSION = pkg.version;
 console.log(`Building Edukatus Analytics v${VERSION}`);
 
 // 1. Clean
-rmSync('dist', { recursive: true, force: true });
-rmSync('build-firefox', { recursive: true, force: true });
+try { rmSync('dist', { recursive: true, force: true }); } catch {}
+try { rmSync('build-firefox', { recursive: true, force: true }); } catch {
+  // May fail if a terminal is inside the directory — just overwrite
+  console.log('Note: could not clean build-firefox (may be in use), overwriting instead');
+}
 
 // 2. Bundle each entry as self-contained IIFE (no import/export)
 const entries = [

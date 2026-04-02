@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Edukatus Analytics",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Analytics dashboard for Progress school administration.",
   "permissions": [
     "storage",
