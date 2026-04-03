@@ -2960,9 +2960,9 @@ function tryLoadStudentPhoto(studentName: string): void {
 // View: Korrelation (Correlation — aggregate absence vs grades)
 // ---------------------------------------------------------------------------
 
-const GRADE_NUMERIC: Record<string, number> = { F: 0, E: 1, D: 2, C: 3, B: 4, A: 5 };
+// Meritvärde scale: F=0, E=10, D=12.5, C=15, B=17.5, A=20
+// (MERIT_POINTS is defined near the top of this file)
 const CORR_BUCKET_LABELS = ['0–5%', '5–10%', '10–15%', '15–20%', '20–30%', '30%+'];
-const CORR_GRADE_LABELS = ['F', 'E', 'D', 'C', 'B', 'A'];
 
 /** Assign an absence-percent value to a bucket index (0–5). */
 function absenceBucket(pct: number): number {
@@ -2974,24 +2974,30 @@ function absenceBucket(pct: number): number {
   return 5;
 }
 
-/** Map a grade value string to its numeric equivalent (or null if unknown). */
+/** Map a grade value string to its meritvärde (0–20 scale, or null if unknown). */
 function gradeNumeric(value: string): number | null {
-  const n = GRADE_NUMERIC[value.toUpperCase()];
+  const n = MERIT_POINTS[value.toUpperCase()];
   return n !== undefined ? n : null;
 }
 
-/** Format a numeric grade average as label string, e.g. 4.2 → "B (4.2)" */
+/** Format a meritvärde average as label string, e.g. 15.0 → "C (15.0)" */
 function fmtGradeAvg(avg: number): string {
   const rounded = Math.round(avg * 10) / 10;
-  const letter = CORR_GRADE_LABELS[Math.round(avg)] ?? '?';
+  let letter = '?';
+  if (avg >= 18.75) letter = 'A';
+  else if (avg >= 16.25) letter = 'B';
+  else if (avg >= 13.75) letter = 'C';
+  else if (avg >= 11.25) letter = 'D';
+  else if (avg >= 5) letter = 'E';
+  else letter = 'F';
   return `${letter} (${rounded})`;
 }
 
-/** Color for a numeric grade 0–5: green=high, red=low */
+/** Color for a meritvärde 0–20: green=high, red=low */
 function gradeColor(avg: number): string {
-  if (avg >= 4) return '#27ae60';
-  if (avg >= 3) return '#4F6A8C';
-  if (avg >= 2) return '#d4a017';
+  if (avg >= 16) return '#27ae60';
+  if (avg >= 13) return '#4F6A8C';
+  if (avg >= 10) return '#d4a017';
   return '#c0392b';
 }
 
@@ -3140,7 +3146,7 @@ function renderCorrelation(): void {
     .map(([courseName, { absences, grades }]) => {
       const avgAbsencePct = Math.round(absences.reduce((a, b) => a + b, 0) / absences.length * 10) / 10;
       const avgGrade = Math.round(grades.reduce((a, b) => a + b, 0) / grades.length * 100) / 100;
-      const riskScore = Math.round((avgAbsencePct / 100) * (1 - avgGrade / 5) * 1000) / 1000;
+      const riskScore = Math.round((avgAbsencePct / 100) * (1 - avgGrade / 20) * 1000) / 1000;
       return { courseName, studentCount: grades.length, avgAbsencePct, avgGrade, riskScore };
     });
 
@@ -3184,16 +3190,16 @@ function renderCorrelation(): void {
   function courseInsight(absencePct: number, avgGrade: number): string {
     const absPct = Math.round(absencePct);
     const gradeStr = fmtGradeAvg(avgGrade);
-    if (absencePct > 30 && avgGrade <= 2) {
+    if (absencePct > 30 && avgGrade <= 12.5) {
       return `Hög frånvaro (${absPct}%) kombinerat med låga betyg (snitt ${gradeStr}) — rekommenderar samtal med kursansvarig.`;
     }
-    if (absencePct > 30 && avgGrade >= 3.5) {
+    if (absencePct > 30 && avgGrade >= 16.25) {
       return `Trots hög frånvaro (${absPct}%) presterar eleverna väl (snitt ${gradeStr}) — möjlig betygsinflation eller ovanligt motiverade elever.`;
     }
-    if (absencePct < 15 && avgGrade <= 1.5) {
+    if (absencePct < 15 && avgGrade <= 10) {
       return `Låg frånvaro men svaga resultat (snitt ${gradeStr}) — kursen kan vara för svår eller undervisningen behöver ses över.`;
     }
-    if (absencePct < 15 && avgGrade >= 4) {
+    if (absencePct < 15 && avgGrade >= 17.5) {
       return `Välfungerande kurs — god närvaro och starka resultat.`;
     }
     if (absencePct > 25) {
@@ -3251,7 +3257,7 @@ function renderCorrelation(): void {
           <div>
             <div style="font-size:11px;color:var(--text-dim);margin-bottom:3px">Meritvärde</div>
             <div style="display:flex;align-items:center;gap:6px">
-              ${miniBar(c.avgGrade, 5, grColor)}
+              ${miniBar(c.avgGrade, 20, grColor)}
               <span style="font-size:12px;font-weight:600;color:${grColor};white-space:nowrap;font-variant-numeric:tabular-nums">${fmtGradeAvg(c.avgGrade)}</span>
             </div>
           </div>
@@ -3305,7 +3311,7 @@ function renderCorrelation(): void {
     if (highRisk > 0) {
       return `${highRisk} av ${group.courses.length} kurser kräver åtgärd — snittfrånvaro ${group.avgAbsence}%, meritvärde ${fmtGradeAvg(group.avgGrade)}.`;
     }
-    if (group.avgAbsence < 10 && group.avgGrade >= 3.5) {
+    if (group.avgAbsence < 10 && group.avgGrade >= 16.25) {
       return `Starkt program — låg frånvaro och goda betyg genomgående.`;
     }
     if (group.avgAbsence > 25) {
@@ -3438,9 +3444,9 @@ function renderCorrelation(): void {
       },
       scales: {
         x: {
-          ...darkScales({ xTitle: 'Meritvärde (0=F, 5=A)' }).x,
+          ...darkScales({ xTitle: 'Meritvärde (F=0, A=20)' }).x,
           min: 0,
-          max: 5,
+          max: 20,
         },
         y: { ...darkScales().y, grid: { color: '#E6E0D8' } },
       },
@@ -3794,7 +3800,7 @@ function renderMentor(): void {
   // Average grade
   const gradesByStudent = new Map<string, number[]>();
   for (const g of data.grades) {
-    const n = GRADE_NUMERIC[g.value.toUpperCase()];
+    const n = MERIT_POINTS[g.value.toUpperCase()];
     if (n === undefined) continue;
     if (!savedNames.includes(g.studentName)) continue;
     const list = gradesByStudent.get(g.studentName) ?? [];
@@ -4299,7 +4305,7 @@ function renderClassCompare(): void {
   // Grade data
   const gradesByStudent = new Map<string, number[]>();
   for (const g of data.grades) {
-    const n = GRADE_NUMERIC[g.value.toUpperCase()];
+    const n = MERIT_POINTS[g.value.toUpperCase()];
     if (n === undefined) continue;
     const list = gradesByStudent.get(g.studentName) ?? [];
     list.push(n);
@@ -4541,7 +4547,7 @@ function renderPrincipal(): void {
 
   const gradesByStudent = new Map<string, number[]>();
   for (const g of data.grades) {
-    const n = GRADE_NUMERIC[g.value.toUpperCase()];
+    const n = MERIT_POINTS[g.value.toUpperCase()];
     if (n === undefined) continue;
     const list = gradesByStudent.get(g.studentName) ?? [];
     list.push(n);
@@ -4603,7 +4609,7 @@ function renderPrincipal(): void {
   // Courses needing attention (from correlation data)
   const courseMap = new Map<string, { absences: number[]; grades: number[] }>();
   for (const g of data.grades) {
-    const n = GRADE_NUMERIC[g.value.toUpperCase()];
+    const n = MERIT_POINTS[g.value.toUpperCase()];
     if (n === undefined) continue;
     const summary = summaries.find(s => s.studentName === g.studentName);
     if (!summary) continue;
